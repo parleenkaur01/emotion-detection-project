@@ -47,8 +47,20 @@ y_train = np.array(y_train)
 X_test = np.array(X_test)
 y_test = np.array(y_test)
 
+# Scale using TRAIN stats only, then apply the same numbers to test.
+train_mean = float(X_train.mean())
+train_std = float(X_train.std())
+if train_std == 0:
+    train_std = 1.0
+
+X_train = (X_train - train_mean) / train_std
+X_test = (X_test - train_mean) / train_std
+
 print("label map:", label_map)
 print("train clips:", len(y_train), "  X_train:", X_train.shape, "  y_train:", y_train.shape)
 print("test clips:", len(y_test), "  X_test:", X_test.shape, "  y_test:", y_test.shape)
 print("y_train (numbers):", y_train)
 print("y_test  (numbers):", y_test)
+print("train mean (before scale):", round(train_mean, 3), "  train std:", round(train_std, 3))
+print("X_train after: mean", round(float(X_train.mean()), 3), " std", round(float(X_train.std()), 3))
+print("X_test  after: mean", round(float(X_test.mean()), 3), " std", round(float(X_test.std()), 3))
