@@ -62,6 +62,8 @@ y_test = np.array(y_test)
 # Scale using TRAIN stats only.
 train_mean = float(X_train.mean())
 train_std = float(X_train.std()) or 1.0
+np.savez("norm_stats.npz", train_mean=train_mean, train_std=train_std)
+print("saved norm_stats.npz")
 X_train = (X_train - train_mean) / train_std
 X_val = (X_val - train_mean) / train_std
 X_test = (X_test - train_mean) / train_std
