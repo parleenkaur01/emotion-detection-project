@@ -1,3 +1,4 @@
+import librosa
 import numpy as np
 import dataset
 from tensorflow import keras
@@ -74,3 +75,45 @@ print(
     f"(speaker-independent: {len(y_train)} train / {len(y_val)} val / "
     f"{len(y_test)} test clips — unseen val/test voices.)"
 )
+
+# Rows = true emotion, columns = the model's guess. Test speakers only.
+pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+cm = np.zeros((num_classes, num_classes), dtype=int)
+for true, guess in zip(y_test, pred):
+    cm[int(true), int(guess)] += 1
+
+names = dataset.EMOTIONS
+print()
+print("Confusion matrix — rows are the true emotion, columns are the guess")
+print("          " + " ".join(f"{name:>5}" for name in names))
+for i, name in enumerate(names):
+    counts = " ".join(f"{int(n):5d}" for n in cm[i])
+    total = int(cm[i].sum())
+    hit = int(cm[i, i])
+    recall = (hit / total * 100) if total else 0.0
+    print(f"true {name}  {counts}   {hit}/{total} = {recall:.0f}%")
+
+model.save("emotion_cnn.keras")
+print()
+print("saved emotion_cnn.keras")
+
+# One clip from a test actor (1073–1091): a voice that was not in training.
+demo_path = next(
+    p
+    for p in sorted(dataset.RAW_DIR.glob("*.wav"))
+    if p.stem.split("_")[0] in dataset.TEST_ACTORS
+)
+actor, sentence, emotion, intensity = demo_path.stem.split("_")
+audio, sr = librosa.load(demo_path, sr=16000)
+mel = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=128, fmax=8000)
+mel_db = librosa.power_to_db(mel, ref=np.max)
+fixed = dataset.pad_or_crop(mel_db)
+fixed = (fixed - dataset.train_mean) / dataset.train_std
+sample = fixed[np.newaxis, ..., np.newaxis]
+probs = model.predict(sample, verbose=0)[0]
+guess = dataset.EMOTIONS[int(np.argmax(probs))]
+
+print(f"file: {demo_path.name}   actor {actor} (unseen)")
+print(f"true emotion: {emotion}    guess: {guess}")
+for name, prob in zip(dataset.EMOTIONS, probs):
+    print(f"  {name}  {prob * 100:5.1f}%")
